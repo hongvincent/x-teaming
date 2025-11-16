@@ -8,11 +8,17 @@ A comprehensive implementation of the research paper **"Large Language Models in
 
 ### Coverage
 
-This implementation covers:
-- **8 Security Domains** from the research paper
-- **32 Security Tasks** across all domains
-- **4 Attack Types** (Data Poisoning, Backdoor, Prompt Injection, Jailbreaking)
-- **4 Defense Mechanisms** (Red Team, Content Filtering, Safety Fine-tuning, Model Merging)
+This implementation focuses on the **Applications** section of the research paper:
+
+**✅ Fully Implemented:**
+- **8 Security Domains** - Complete coverage of all cybersecurity applications
+- **32 Security Tasks** - All practical security modules implemented
+
+**📚 Research Reference (Not Implemented):**
+- **4 Attack Types** (Data Poisoning, Backdoor, Prompt Injection, Jailbreaking) - Theoretical content on LLM vulnerabilities
+- **4 Defense Mechanisms** (Red Team, Content Filtering, Safety Fine-tuning, Model Merging) - Model-level defense techniques
+
+> **Note**: This project implements the practical cybersecurity applications described in the paper. The attack types and defense mechanisms are research topics covered in the paper but are not part of the practical security platform implementation.
 
 ## 📁 Project Structure
 
