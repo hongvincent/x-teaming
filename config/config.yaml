@@ -18,7 +18,28 @@ api:
 
 # OpenAI Configuration
 openai:
-  model: "gpt-4"
+  # Primary model (Latest flagship model as of Nov 2025)
+  model: "gpt-5.1-chat-latest"
+
+  # Fallback model chain (will try in order if primary fails)
+  fallback_models:
+    - "gpt-5"
+    - "gpt-4.1"
+    - "gpt-4o"
+    - "gpt-4"
+
+  # Model presets for different use cases
+  models:
+    flagship: "gpt-5.1-chat-latest"  # Best performance, adaptive reasoning
+    reasoning: "gpt-5"                # Strong reasoning capabilities
+    longcontext: "gpt-4.1"            # 1M token context window
+    omni: "gpt-4o"                    # Multimodal capabilities
+    balanced: "gpt-5-mini"            # Good balance of speed and quality
+    fast: "gpt-5-nano"                # Fastest, most affordable
+    budget: "gpt-4o-mini"             # Cost-effective option
+    legacy: "gpt-4"                   # Backward compatibility
+
+  # Default parameters
   temperature: 0.7
   max_tokens: 4000
   top_p: 1.0
@@ -26,6 +47,42 @@ openai:
   presence_penalty: 0.0
   timeout: 60
   max_retries: 3
+
+  # Model-specific configurations
+  model_configs:
+    "gpt-5.1-chat-latest":
+      max_tokens: 8000
+      supports_adaptive_reasoning: true
+      context_window: 200000
+    "gpt-5":
+      max_tokens: 8000
+      supports_adaptive_reasoning: true
+      context_window: 200000
+    "gpt-4.1":
+      max_tokens: 16000
+      context_window: 1000000  # 1M tokens
+    "gpt-4o":
+      max_tokens: 8000
+      supports_multimodal: true
+      context_window: 128000
+    "gpt-5-mini":
+      max_tokens: 4000
+      context_window: 128000
+    "gpt-5-nano":
+      max_tokens: 4000
+      context_window: 128000
+    "gpt-4o-mini":
+      max_tokens: 4000
+      context_window: 128000
+
+  # Automatic model selection based on task complexity
+  adaptive_model_selection:
+    enabled: true
+    simple_tasks: "gpt-5-nano"      # Quick classification, summarization
+    medium_tasks: "gpt-5-mini"       # General security analysis
+    complex_tasks: "gpt-5"           # Deep code analysis, reasoning
+    critical_tasks: "gpt-5.1-chat-latest"  # Critical security decisions
+    large_context: "gpt-4.1"         # Large codebase analysis
 
 # Rate Limiting
 rate_limiting:

@@ -67,7 +67,10 @@ x-teaming/
 - ✅ 프로젝트 구조 설정
 - ✅ 설정 관리 (YAML 기반)
 - ✅ 로깅 시스템 (JSON + 컬러 콘솔 출력)
-- ✅ LLM 클라이언트 (재시도 로직 및 캐싱 포함)
+- ✅ 최신 모델 지원 LLM 클라이언트 (GPT-5.1, GPT-5, GPT-4.1, GPT-4o)
+  - 작업 복잡도 기반 적응형 모델 선택
+  - 자동 폴백 메커니즘
+  - 모델별 최적화
 - ✅ 데이터 로더 유틸리티
 
 ### 전체 8개 도메인 구현 완료
@@ -282,17 +285,31 @@ print(f"성공 확률: {exploit.success_probability}")
 
 ## 📚 문서
 
-- **[claude.md](claude.md)** - 종합 프로젝트 개요 및 로드맵
-- **[claude_KR.md](claude_KR.md)** - 한국어 프로젝트 개요
-- **[agents.md](agents.md)** - 상세 에이전트 아키텍처
-- **[agents_KR.md](agents_KR.md)** - 한국어 에이전트 아키텍처
+### 일반 문서
+- **[README.md](README.md)** - 프로젝트 개요 및 빠른 시작 (영문)
+- **[README_KR.md](README_KR.md)** - 프로젝트 개요 및 빠른 시작 (한국어)
+- **[claude.md](claude.md)** - 종합 프로젝트 개요 및 로드맵 (영문)
+- **[claude_KR.md](claude_KR.md)** - 종합 프로젝트 개요 및 로드맵 (한국어)
+- **[agents.md](agents.md)** - 상세 에이전트 아키텍처 (영문)
+- **[agents_KR.md](agents_KR.md)** - 상세 에이전트 아키텍처 (한국어)
 - **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - 프로젝트 상태 (영문)
 - **[PROJECT_STATUS_KR.md](PROJECT_STATUS_KR.md)** - 프로젝트 상태 (한국어)
+
+### 모델 선택 및 최적화
+- **[docs/MODEL_SELECTION_GUIDE.md](docs/MODEL_SELECTION_GUIDE.md)** - **신규!** OpenAI 모델 선택 가이드 (영문)
+- **[docs/MODEL_SELECTION_GUIDE_KR.md](docs/MODEL_SELECTION_GUIDE_KR.md)** - **신규!** OpenAI 모델 선택 가이드 (한국어)
+
+> 💡 **팁**: 모델 선택 가이드를 확인하여 작업에 적합한 모델을 선택함으로써 성능과 비용을 최적화하세요!
 
 ## 🛠️ 기술 스택
 
 - **Python 3.10+** - 주 프로그래밍 언어
-- **OpenAI GPT-4** - 대규모 언어 모델
+- **OpenAI API (최신 모델)** - 대규모 언어 모델
+  - GPT-5.1-chat-latest (적응형 추론을 갖춘 플래그십)
+  - GPT-5 (강력한 추론 능력)
+  - GPT-4.1 (100만 토큰 컨텍스트 윈도우)
+  - GPT-4o (멀티모달 기능)
+  - 비용 최적화를 위한 -mini 및 -nano 변형
 - **YAML** - 설정 관리
 - **Pandas** - 데이터 처리
 - **Tenacity** - 재시도 로직

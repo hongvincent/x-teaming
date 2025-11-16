@@ -44,7 +44,7 @@ x-teaming/
 │   │       └── network_security_agent.py # Coordinator
 │   │
 │   ├── utils/                  # Core Utilities
-│   │   ├── llm_client.py       # OpenAI GPT-4 client with caching
+│   │   ├── llm_client.py       # OpenAI client (GPT-5.1, GPT-5, GPT-4.1, GPT-4o)
 │   │   ├── config_loader.py    # Configuration management
 │   │   ├── logger.py           # Structured logging
 │   │   └── data_loader.py      # Dataset loading
@@ -64,7 +64,10 @@ x-teaming/
 - ✅ Project structure setup
 - ✅ Configuration management (YAML-based)
 - ✅ Logging system (JSON + colored console output)
-- ✅ LLM client (OpenAI GPT-4 with retry logic and caching)
+- ✅ LLM client with latest models support (GPT-5.1, GPT-5, GPT-4.1, GPT-4o)
+  - Adaptive model selection based on task complexity
+  - Automatic fallback mechanism
+  - Model-specific optimizations
 - ✅ Data loader utilities
 
 ### Phase 2: Network Security Domain (COMPLETE)
@@ -278,14 +281,29 @@ print(f"Success Rate: {exploit.success_probability}")
 
 ## 📚 Documentation
 
+### General Documentation
+- **[README.md](README.md)** - Project overview and quick start (English)
+- **[README_KR.md](README_KR.md)** - 프로젝트 개요 및 빠른 시작 (한국어)
 - **[claude.md](claude.md)** - Comprehensive project overview and roadmap
 - **[agents.md](agents.md)** - Detailed agent architecture and design
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Current project status and metrics
 - **[config/config.yaml](config/config.yaml)** - Configuration reference
+
+### Model Selection & Optimization
+- **[docs/MODEL_SELECTION_GUIDE.md](docs/MODEL_SELECTION_GUIDE.md)** - **NEW!** OpenAI Model Selection Guide
+- **[docs/MODEL_SELECTION_GUIDE_KR.md](docs/MODEL_SELECTION_GUIDE_KR.md)** - **NEW!** 모델 선택 가이드 (한국어)
+
+> 💡 **Tip**: Check the Model Selection Guide to optimize performance and costs by choosing the right model for your task!
 
 ## 🛠️ Technology Stack
 
 - **Python 3.10+** - Primary language
-- **OpenAI GPT-4** - Large Language Model
+- **OpenAI API (Latest Models)** - Large Language Models
+  - GPT-5.1-chat-latest (Flagship with adaptive reasoning)
+  - GPT-5 (Strong reasoning capabilities)
+  - GPT-4.1 (1M token context window)
+  - GPT-4o (Multimodal capabilities)
+  - Plus -mini and -nano variants for cost optimization
 - **YAML** - Configuration
 - **Pandas** - Data processing
 - **Tenacity** - Retry logic

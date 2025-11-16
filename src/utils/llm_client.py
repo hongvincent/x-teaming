@@ -62,7 +62,12 @@ class RateLimiter:
 class LLMClient:
     """
     LLM Client for interacting with OpenAI models
-    Provides caching, rate limiting, and error handling
+    Provides caching, rate limiting, error handling, and intelligent model selection
+
+    Features:
+    - Automatic fallback to alternative models on failure
+    - Adaptive model selection based on task complexity
+    - Support for latest models (GPT-5.1, GPT-5, GPT-4.1, GPT-4o)
     """
 
     def __init__(self, use_cache: bool = True):
@@ -84,7 +89,15 @@ class LLMClient:
         self.use_cache = use_cache
         self._cache: Dict[str, Any] = {}
 
-        logger.info("LLM Client initialized with model: %s", self.openai_config.model)
+        # Model configuration
+        self.primary_model = self.openai_config.model
+        self.fallback_models = self.openai_config.get("fallback_models", [])
+        self.model_presets = self.openai_config.get("models", {})
+        self.model_configs = self.openai_config.get("model_configs", {})
+        self.adaptive_config = self.openai_config.get("adaptive_model_selection", {})
+
+        logger.info("LLM Client initialized with primary model: %s", self.primary_model)
+        logger.info("Fallback models configured: %s", ", ".join(self.fallback_models))
 
     def _generate_cache_key(self, prompt: str, **kwargs) -> str:
         """
@@ -101,11 +114,66 @@ class LLMClient:
         cache_str = json.dumps(cache_data, sort_keys=True)
         return hashlib.md5(cache_str.encode()).hexdigest()
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
-    )
+    def select_model(
+        self,
+        task_complexity: str = "medium",
+        context_size: Optional[int] = None,
+        prefer_speed: bool = False,
+        prefer_quality: bool = False,
+    ) -> str:
+        """
+        Intelligently select the best model for the task
+
+        Args:
+            task_complexity: Task complexity level (simple/medium/complex/critical)
+            context_size: Expected context size in tokens
+            prefer_speed: Prioritize speed over quality
+            prefer_quality: Prioritize quality over speed
+
+        Returns:
+            str: Selected model name
+        """
+        # Check if adaptive selection is enabled
+        if not self.adaptive_config.get("enabled", False):
+            return self.primary_model
+
+        # Handle large context requirements
+        if context_size and context_size > 200000:
+            logger.info("Large context detected, using GPT-4.1")
+            return self.adaptive_config.get("large_context", "gpt-4.1")
+
+        # Handle speed preference
+        if prefer_speed:
+            return self.model_presets.get("fast", "gpt-5-nano")
+
+        # Handle quality preference
+        if prefer_quality:
+            return self.model_presets.get("flagship", "gpt-5.1-chat-latest")
+
+        # Map complexity to model
+        complexity_map = {
+            "simple": self.adaptive_config.get("simple_tasks", "gpt-5-nano"),
+            "medium": self.adaptive_config.get("medium_tasks", "gpt-5-mini"),
+            "complex": self.adaptive_config.get("complex_tasks", "gpt-5"),
+            "critical": self.adaptive_config.get("critical_tasks", "gpt-5.1-chat-latest"),
+        }
+
+        selected_model = complexity_map.get(task_complexity, self.primary_model)
+        logger.info(f"Selected model '{selected_model}' for {task_complexity} task")
+        return selected_model
+
+    def get_model_config(self, model: str) -> Dict[str, Any]:
+        """
+        Get model-specific configuration
+
+        Args:
+            model: Model name
+
+        Returns:
+            Dict: Model configuration
+        """
+        return self.model_configs.get(model, {})
+
     def complete(
         self,
         prompt: str,
@@ -113,30 +181,48 @@ class LLMClient:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         system_message: Optional[str] = None,
+        task_complexity: str = "medium",
+        use_fallback: bool = True,
         **kwargs,
     ) -> str:
         """
-        Generate completion for prompt
+        Generate completion for prompt with intelligent model selection and fallback
 
         Args:
             prompt: User prompt
-            model: Model name (default from config)
+            model: Model name (default: adaptive selection)
             temperature: Sampling temperature (default from config)
-            max_tokens: Maximum tokens to generate (default from config)
+            max_tokens: Maximum tokens to generate (default from config or model config)
             system_message: System message for context
+            task_complexity: Task complexity for adaptive model selection
+            use_fallback: Enable fallback to alternative models on failure
             **kwargs: Additional parameters
 
         Returns:
             str: Generated completion
         """
-        # Use config defaults if not provided
-        model = model or self.openai_config.model
+        # Adaptive model selection if no model specified
+        if model is None:
+            model = self.select_model(
+                task_complexity=task_complexity,
+                context_size=len(prompt.split()) * 2,  # Rough estimate
+                prefer_speed=kwargs.pop("prefer_speed", False),
+                prefer_quality=kwargs.pop("prefer_quality", False),
+            )
+
+        # Get model-specific configuration
+        model_config = self.get_model_config(model)
+
+        # Use model-specific max_tokens if not provided
+        if max_tokens is None:
+            max_tokens = model_config.get("max_tokens", self.openai_config.max_tokens)
+
+        # Use config defaults for other parameters
         temperature = (
             temperature
             if temperature is not None
             else self.openai_config.temperature
         )
-        max_tokens = max_tokens or self.openai_config.max_tokens
 
         # Check cache
         cache_key = self._generate_cache_key(
@@ -147,40 +233,55 @@ class LLMClient:
             logger.debug("Cache hit for prompt")
             return self._cache[cache_key]
 
-        # Build messages
-        messages = []
-        if system_message:
-            messages.append({"role": "system", "content": system_message})
-        messages.append({"role": "user", "content": prompt})
+        # Build models to try (primary + fallbacks)
+        models_to_try = [model]
+        if use_fallback:
+            models_to_try.extend(self.fallback_models)
 
-        logger.info(f"Calling OpenAI API with model: {model}")
+        # Try each model in sequence
+        last_error = None
+        for attempt_model in models_to_try:
+            try:
+                # Build messages
+                messages = []
+                if system_message:
+                    messages.append({"role": "system", "content": system_message})
+                messages.append({"role": "user", "content": prompt})
 
-        try:
-            # Call OpenAI API
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                top_p=self.openai_config.top_p,
-                frequency_penalty=self.openai_config.frequency_penalty,
-                presence_penalty=self.openai_config.presence_penalty,
-                **kwargs,
-            )
+                logger.info(f"Calling OpenAI API with model: {attempt_model}")
 
-            # Extract completion
-            completion = response.choices[0].message.content
+                # Call OpenAI API
+                response = self.client.chat.completions.create(
+                    model=attempt_model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=self.openai_config.top_p,
+                    frequency_penalty=self.openai_config.frequency_penalty,
+                    presence_penalty=self.openai_config.presence_penalty,
+                    **kwargs,
+                )
 
-            # Cache result
-            if self.use_cache:
-                self._cache[cache_key] = completion
+                # Extract completion
+                completion = response.choices[0].message.content
 
-            logger.info("OpenAI API call successful")
-            return completion
+                # Cache result
+                if self.use_cache:
+                    self._cache[cache_key] = completion
 
-        except Exception as e:
-            logger.error(f"OpenAI API call failed: {e}")
-            raise
+                logger.info(f"OpenAI API call successful with model: {attempt_model}")
+                return completion
+
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Model {attempt_model} failed: {e}")
+                if attempt_model != models_to_try[-1]:
+                    logger.info(f"Falling back to next model...")
+                continue
+
+        # All models failed
+        logger.error(f"All models failed. Last error: {last_error}")
+        raise last_error
 
     def complete_with_json(
         self, prompt: str, schema: Optional[Dict] = None, **kwargs
